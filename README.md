@@ -536,3 +536,213 @@ To add links between translations in the footer of each page, the framework need
 ```
 
 The list of translations only needs to appear in the `toc.json` file, and does not need to appear in the localized `toc.xx.json` files.
+# Framework for Web technology roadmaps
+
+This repository hosts a framework to present roadmaps of ongoing and future Web technologies.
+
+It aims at simplifying the creation and maintenance of such roadmaps by collecting automatically information about standardization and implementation status of features described in W3C specifications and others.
+
+## Available roadmaps
+* [Overview of Media Technologies for the Web](https://w3c.github.io/web-roadmaps/media/)
+* [Roadmap for Security technologies](https://w3c.github.io/web-roadmaps/security/)
+* [Roadmap of Web Applications on Mobile](https://w3c.github.io/web-roadmaps/mobile/)
+* [Roadmap of Technologies Needed for Web Publications](https://w3c.github.io/web-roadmaps/publishing/)
+* [Spatial data on the Web Roadmap](https://w3c.github.io/web-roadmaps/sdw/)
+* [Games on the Web Roadmap](https://w3c.github.io/web-roadmaps/games/)
+
+## Table of contents
+* [Overview of the framework](#overview-of-the-framework)
+* [Adding a feature to a roadmap](#adding-a-feature-to-a-roadmap)
+* [JSON format for describing specifications](#json-format-for-describing-specifications)
+* [Creating a new roadmap page or a new single-page roadmap](#creating-a-new-roadmap-page-or-a-new-single-page-roadmap)
+* [Creating the index of a new multi-page roadmap](#creating-the-index-of-a-new-multi-page-roadmap)
+* [Creating an About this document page](#creating-an-about-this-document-page)
+* [Creating feature sections](#creating-feature-sections)
+* [Customizing summary tables](#customizing-summary-tables)
+* [Repository branches](#repository-branches)
+* [Generate content locally](#generate-content-locally)
+* [Translating a roadmap](#translating-a-roadmap)
+
+## Overview of the framework
+
+A **roadmap** is defined here as a collection of features that make up a consistent set of technologies used to build a particular type of applications (e.g. media applications, games) or to promote a particular aspect of application development (e.g. security). Each feature is described in prose to explain its relevance to the theme of the roadmap. From that prose, the framework generates tables (one per section) summarizing the standardization and implementation status of the specification(s) that define(s) the said feature.
+
+A given roadmap is expected to contain one or more of the following sections describing the high-level status of the features described in the section:
+* *Well-deployed technologies* are technologies that are finished or nearly finished (e.g. CR and beyond in the W3C Rec track) and that have already found significant adoption among implementations;
+* *Technologies in progress* list features that have already started their standardization track progress;
+* *Exploratory work* groups features described in specifications prior to their proper standardization work;
+* *Features not covered by ongoing work* identify functionalities that are known to be needed for some use cases, but that no existing specification adequately covers
+* *Discontinued features* point out attempts to develop a feature that was deemed useful at a point in time, but that was stopped for some reason, or that led to some alternative proposal.
+
+Multiple roadmaps can be associated in a single **multi-page roadmap** with a front index page that links to individual roadmap pages. The framework generates a navigation menu in each individual roadmap page to navigate between them.
+
+In short, the goal of the framework is to allow roadmap authors to focus on the prose that describes features that compose the roadmap, the framework taking care of adding implementation data for each feature that composes the roadmap and of formatting the result, including providing means for users to navigate between pages.
+
+While the pages are generated dynamically in the browser, it is likely preferable to publish exported versions of the roadmaps since the framework has not been optimized for performance.
+
+## Adding a feature to a roadmap
+
+A **feature** is roughly speaking a piece of technology that the target audience of the document would recognize as something they need to build the product they are interested in.
+
+For the 3 first categories of features described above, a feature comes with one or more specifications that covers it. The process to add a feature to a roadmap or add a specification to an existing feature is as follows:
+* a feature is defined in an encompassing HTML element (typically `<p>` or `<div>`) by adding a `data-feature` attribute to it with the name of the feature as its value. For instance, `<p data-feature='Video capture'></p>` will serve as the container for the prose describing the said feature and the specs that cover it
+* each spec that provides the hook for the said feature needs to be listed in that container element with a `<a>` tag containing a `data-featureid` attribute, whose value is a shortname for the specification that refers to the JSON file described below, possibly completed with a `/` and the name of the feature of interest within that specification. For instance, adding `<a data-featureid='getusermedia'>the Media Capture and Streams API</a>` to the paragraph above indicates that the specification described by the `getusermedia.json` file provides a way to implement the "video capture" feature. A `data-linkto` attribute may be added and set to `ED` to tell the framework to link to the Editor's Draft (instead of to the latest published version on /TR/).
+* the [data](data/) directory contains a JSON file that describes the various specifications that provides the hooks relevant to the various features; that JSON file follows a [format described below](#json-format-for-describing-specifications).
+
+If you want to reference a specification's feature but not have it appear in summary tables at the end of each section, add a `data-linkonly` attribute (set to whatever value). For instance `<a data-featureid='webaudio/worklet' data-linkonly>AudioWorklet</a>` would link to the AudioWorklet definition in the Web Audio API but would not list this entry in the following table. This can be useful to reference specs that can be used in conjunction with the feature being described.
+
+## JSON format for describing specifications
+
+Each specification is described by a JSON object that will allow retrieving information about the standardization status of the spec and its level of implementation in browsers. Note the framework will automatically generate an empty data file when it does not exist for W3C specs (see [Generate content locally](#generate-content-locally) for details), allowing authors to reference a W3C spec to start with without having to worry about creating the data file.
+
+That JSON object is stored in a file in the [data](data/) directory, whose name is then used to refer to the said specification from relevant features.
+
+Depending on the advancement of the underlying specification, the JSON object can have the following properties:
+* `url`: should point to the URL of the latest version of the specification. This URL will be used to collect additional data about the spec (standardization status, Working Groups that produce it, editors draft, etc) and as target of links that reference the feature. URL may contain a fragment to point to a specific section in a specification. If the `url` property is not specified, the framework assumes that the underlying specification is a W3C specification,  that the filename is its short name, and that the URL of the spec is `https://www.w3.org/TR/[filename]/`.
+* `impl`: for specifications for which browser implementations are expected, the `impl` property explains where to look for implementation info. Described below in [Describing implementation status](#describing-implementation-status).
+* `polyfills`: for specifications for which there are polyfills available that would be worth reporting, the `polyfills` property lists these polyfills. It should be an array of objects that have a `url` property that links to the polyfill's home page on the Web, and a `label` property with the name of polyfill.
+* `features`: in case the reference to the specification would benefit from being more specific than the specification as a whole, and/or in case available implementation information is more fine-grained than the spec level, the `features` property makes it possible to list features in the spec. It must be an object whose keys are an internal feature ID, and whose values are an object describing the feature with the following properties:
+  * `title`: a label for the feature. Property is mandatory.
+  * `url`: a URL to the feature in the spec. Fragments such as `#my-feature` are allowed. Property is optional.
+  * `impl`: where to look for implementation info. Described below in [Describing implementation status](#describing-implementation-status).
+* `featuresCoverage`: when features are listed in the `features` property, this property asserts whether the list of features covers the whole spec, or whether some additional features need to be specified. This information is used to compute the implementation status of a spec from the implementation status of individual features. Property is optional. Possible values are `partial` and `full`. Default value is `partial`.
+* `status`: when the specification is unknown to the [W3C API](https://w3c.github.io/w3c-api/) and to [Specref](https://www.specref.org/), the `status` property can be used to set the maturity level of the specification. Possible values are one of `ED` (Editor's Draft), `WD` (Working Draft), `LS` (Living Standard), `CR` (Candidate Recommendation), `PR` (Proposed Recommendation), `REC` (Recommendation), `Retired` (retired or obsoleted), or `NOTE` (Group Note).
+* `title`: when the specification is unknown to the [W3C API](https://w3c.github.io/w3c-api/) and to [Specref](https://www.specref.org/), the `title` property should be set to the title of the specification.
+* `edDraft`: when the specification is unknown to the [W3C API](https://w3c.github.io/w3c-api/) and to [Specref](https://www.specref.org/), or when these APIs do not know the URL of the Editor's Draft for the specification, the `edDraft` property should contain the URL of the Editor's Draft of the specification.
+* `repository`: when the repository of the specification cannot be determined automatically, the `repository` property should contain the URL of the repository that contains the source of the Editor's Draft of the specification
+* `wgs`: when the specification is unknown to the [W3C API](https://w3c.github.io/w3c-api/) and to [Specref](https://www.specref.org/), the `wgs` property should be an array of objects describing the groups that are producing the spec; each such object should have a `url` property with a link to the group's home page, and a `label` property with the name of the group.
+* `publisher`: the organization that published the specification. The framework automatically computes the publisher for W3C, WHATWG, and IETF specifications.
+* `informative`: when the specification is unknown to the [W3C API](https://w3c.github.io/w3c-api/), set the `informative` property to `true` to tell the framework that it only contains informative content or that it will be (or has been) published as a Group Note and not as a Recommendation.
+* `evergreen`: from time to time, specifications remain as drafts indefinitely but are continuously updated and can be considered stable whenever a new version is published. Set the `evergreen` property to `true` when the specification can always be used as a reference, no matter where it is on the Recommendation track.
+* `milestones`: When the [Milestone tracker](https://github.com/w3c/spec-dashboard/#milestone-tracker) does not know anything about the specification, you may set the `milestones` properties to planned publication milestones. Value must be an object whose keys are the planned maturity level (e.g. `CR`, `REC`) and whose values are the planned publication date under the form `YYYY-MM-DD`. Do not use that property for W3C specs as milestones should rather be entered in the milestone tracker!
+* `seeAlso`: a list of other resources that could be worth looking at in relation with the specification. The `seeAlso` property should be an array of objects that have a `url` property set to the URL of the resource, a `label` property set to the title of the resource, and optionally a `kind` property that specifies the kind of resource as a string. The links are rendered in the "See also" column. The whole list is rendered by default, the `kind` value can be used to filter resources in some cases. See [Customizing summary tables](#customizing-summary-tables) for details.
+
+Here is an example of a JSON file that describes the "Intersection Observer" specification:
+```json
+{
+  "url": "https://www.w3.org/TR/intersection-observer/",
+  "impl": {
+    "caniuse": "intersectionobserver",
+    "chromestatus": 5695342691483648,
+    "webkitstatus": "specification-intersection-observer",
+    "edgestatus": "Intersection Observer",
+    "mdn": "api.IntersectionObserver"
+  },
+  "polyfills": [
+    {
+      "label": "Polyfill.io",
+      "url": "https://polyfill.io/v2/docs/features/#IntersectionObserver"
+    }
+  ]
+}
+```
+
+### Describing implementation status
+
+*Note (March 2018): implementation status features are still being worked upon in the framework. The implementation description should remain backward compatible, but it may still evolve.*
+
+Provided the description contains relevant information, the framework can automatically retrieve the implementation status in main browsers from the following Web platform status sources: [Can I use](http://caniuse.com/), [Chrome Platform Status](https://www.chromestatus.com/features), [MDN Browser Compatibility Data](https://github.com/mdn/browser-compat-data), [Microsoft Edge web platform features status and roadmap](https://developer.microsoft.com/en-us/microsoft-edge/platform/status/) and [WebKit Feature Status](https://webkit.org/status/).
+
+To enable this, the decription must contain an `impl` property whose value is an object with one or more of the following optional properties:
+* `caniuse`: the name of the feature in [Can I use](http://caniuse.com/) (the one that appears in the URL after `#feat=`)
+* `chromestatus`: the number used to identify features in [Chrome Platform Status](https://www.chromestatus.com/features) (the one that appears in the URL after `features/`)
+* `edgestatus`: the name used to identify features in [Microsoft Edge web platform features status and roadmap](https://developer.microsoft.com/en-us/microsoft-edge/platform/status/) (the full feature title that appears in the page)
+* `mdn`: the [hierarchy of strings](https://github.com/mdn/browser-compat-data/blob/master/schemas/compat-data-schema.md#feature-hierarchies) that identifies the feature in the [MDN Browser Compatibility Data](https://github.com/mdn/browser-compat-data)
+* `webkitstatus`: the name used to identify features in [WebKit Feature Status](https://webkit.org/status/) (the one that appears in the URL after `status/#`)
+* `other`: manually entered implementation status. See below for details.
+
+From time to time, platform status sources may:
+* contain implementation information about the specification but at a different granularity level, e.g. you want implementation info about the entire specification and the site only gives implementation status about a particular feature within the specification, or the opposite)
+* contain implementation information which you know is *incorrect*.
+* not contain any information about a specification at all
+
+When this happens, you may use the `other` sub-property to specify implementation status manually. Property value must be an array of objects that have the following properties:
+* `ua`: the user agent name (typically one of `edge`, `firefox`, `chrome`, `safari`, `webkit`)
+* `status`: the implementation status, which should be one of `shipped`, `indevelopment`, `experimental`, `consideration`, or an empty string to say "Not currently considered".
+* `source` (optional but recommended): a short name that identifies the origin of the information. Use `feedback` to flag information that comes from review and that should override whatever other implementation status the framework might be able to retrieve automatically for the user agent under consideration.
+* `date` (optional but recommended): the `YYYY-MM-DD` date at which that manually information was last reviewed. Keeping implementation information up to date, is difficult, and error prone. The information needs to be periodically checked and re-validated. The date is meant to track the last time when someone checked and validated the information.
+* `comment` (optional but recommended): a comment that provides contextual information, for instance to explain why the information in platform status sources should be regarded as incorrect.
+* `prefix` (optional): whether the implementation requires the use of a prefix
+* `flag` (optional): whether some flag needs to be set to enable the feature
+
+For instance, let's say that "Can I use" report that a particular feature is in development in WebKit, whereas you know that the feature has not yet been considered there; and that it does not report anything on status in Edge, whereas you know from discussion with the Edge team that it is being considered, you could add:
+
+```json
+{
+  "TR": "...",
+  "impl": {
+    "caniuse": "...",
+    "other": [
+      {
+        "ua": "webkit",
+        "status": "",
+        "source": "feedback",
+        "date": "2018-03-19",
+        "comment": "No public signal in WebKit for the feature, information reported by Can I Use is incorrect"
+      },
+      {
+        "ua": "edge",
+        "status": "consideration",
+        "source": "insight",
+        "date": "2018-03-19",
+        "comment": "From discussion with the Edge team, the feature is under consideration"
+      }
+    ]
+  }
+}
+```
+
+In the previous example, the information on `webkit` will override the information reported by "Can I Use", whereas the information on `edge` will not be used if "Can I Use" asserts that the development has started or that the feature has shipped in Edge.
+
+
+**Important:** As noted above, maintaining implementation information over time is difficult and error prone. Whenever possible, the implementation status of a particular feature should be automatically extracted from main sources, and the `other` mechanism should only be used as a fallback when implementation status is incorrect or not available.
+
+## Creating a new roadmap page or a new single-page roadmap
+Start from the following template
+```html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Title of the roadmap</title>
+  </head>
+  <body>
+    <header>
+      <h1>Title of the roadmap</h1>
+      <p>Description of the scope of the roadmap and to whom it matters</p>
+    </header>
+    <main>
+      <section class="featureset well-deployed">
+        <h2>Well-deployed technologies</h2>
+      </section>
+      <section class="featureset in-progress">
+        <h2>Specifications in progress</h2>
+      </section>
+      <section class="featureset exploratory-work">
+        <h2>Exploratory work</h2>
+      </section>
+      <section class="not-covered">
+        <h2>Features not covered by ongoing work</h2>
+        <dl>
+          <dt></dt>
+          <dd></dd>
+        </dl>
+      </section>
+      <section class="discontinued">
+        <h2>Discontinued features</h2>
+        <dl>
+          <dt></dt>
+          <dd></dd>
+        </dl>
+      </section>
+    </main>
+    <script src="../js/generate.js"></script>
+  </body>
+</html>
+```
+If adding to an existing roadmap, you should also edit the `toc.json` file to add a link to that new page.
+
+For a new single page roadmap, you also need to create a `toc.json` file as described below.
+
+## Creating the index of a new multi-page roadmap
+If you want to divide your roadmap as a multipage docu
